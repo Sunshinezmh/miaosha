@@ -2,11 +2,12 @@ package com.zmh.miaosha.service.model;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 //用户下单的交易领域模型
 @Data
-public class OrderModel {
+public class OrderModel implements Serializable {
 
     //交易ID
     private String id;

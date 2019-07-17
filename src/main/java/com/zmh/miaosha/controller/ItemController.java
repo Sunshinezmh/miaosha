@@ -10,10 +10,12 @@ import io.swagger.annotations.ApiOperation;
 import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RestController
@@ -23,6 +25,9 @@ public class ItemController extends BaseController {
 
     @Autowired
     private ItemService itemService;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
 
     // 创建商品
@@ -55,7 +60,17 @@ public class ItemController extends BaseController {
      */
     @GetMapping(value = "/get")
     public CommonReturnType getItem(@RequestParam(name = "id") String id) throws BusinessException {
-        ItemModel itemModel=itemService.getItemById(id);
+        //根据商品的id到reids内获取商品
+        String keyItem="item_id"+":"+id;
+        ItemModel itemModel= (ItemModel) redisTemplate.opsForValue().get(keyItem);
+        //若redis内不存在对应的itemModel，则访问数据库
+        if (itemModel == null) {
+             itemModel=itemService.getItemById(id);
+        //设置itemModel放到redis内
+            redisTemplate.opsForValue().set(keyItem,itemModel);
+            redisTemplate.expire(keyItem,10, TimeUnit.MINUTES);
+        }
+
         ItemVO itemVO=convertVoFromModel(itemModel);
         return CommonReturnType.create(itemVO);
     }
